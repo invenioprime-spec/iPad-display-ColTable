@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iPad Studio Display</title>
+    <script src="https://js.pusher.com/8.0.1/pusher.min.js"></script>
+    <script>
+        // Connect to your Pusher App
+        const pusher = new Pusher('bc54e1da8192db0508d6', {
+            cluster: 'us2'
+        });
+
+        // Subscribe to your video production channel
+        const channel = pusher.subscribe('studio-channel');
+
+        // Listen for the "change-scene" command
+        channel.bind('change-scene', function(data) {
+            // Update the text on screen dynamically when a command arrives
+            document.getElementById('scene-title').innerText = data.scene.toUpperCase();
+            
+            if(data.scene === 'space') {
+                document.body.style.backgroundColor = '#0b0c10';
+                document.getElementById('status').innerText = "Displaying: Deep Space Theme";
+            } else if(data.scene === 'subcellular') {
+                document.body.style.backgroundColor = '#05386b';
+                document.getElementById('status').innerText = "Displaying: Subcellular Theme";
+            }
+        });
+    </script>
+    <style>
+        body {
+            font-family: sans-serif;
+            background-color: #222;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            transition: background-color 0.5s ease;
+        }
+        h1 { font-size: 3rem; margin-bottom: 10px; }
+        p { font-size: 1.5rem; color: #aaa; }
+    </style>
+</head>
+<body>
+    <p>Current Scene:</p>
+    <h1 id="scene-title">WAITING...</h1>
+    <p id="status">Ready and listening for Stream Deck signals...</p>
+</body>
+</html>
