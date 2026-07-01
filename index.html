@@ -3,51 +3,55 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Studio Link</title>
+    <title>Studio Link Multi-Display</title>
     <script src="https://js.pusher.com/8.0.1/pusher.min.js"></script>
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #111; display: flex; align-items: center; justify-content: center; color: white; font-family: sans-serif; }
-        iframe { width: 100%; height: 100%; border: none; display: none; position: absolute; top:0; left:0; z-index: 10; }
+        video { width: 100%; height: 100%; object-fit: cover; display: none; position: absolute; top:0; left:0; z-index: 10; }
         #status-text { font-size: 1.5rem; text-align: center; z-index: 5; color: #00ffcc; }
     </style>
 </head>
 <body>
 
-    <div id="status-text">System Live. Awaiting embed signal...</div>
-    
-    <iframe id="studio-frame" allow="autoplay; encrypted-media"></iframe>
+    <div id="status-text">System Live. Awaiting target assignment...</div>
+    <video id="studio-video" autoplay loop muted playsinline></video>
 
     <script>
         const statusText = document.getElementById('status-text');
-        const frameElement = document.getElementById('studio-frame');
+        const videoElement = document.getElementById('studio-video');
+
+        // 1. Automatically detect which iPad this is from the URL (e.g., ?id=ipad1)
+        const urlParams = new URLSearchParams(window.location.search);
+        const myID = urlParams.get('id') || 'unassigned';
+        
+        statusText.innerText = "System Live. Identified as: " + myID;
 
         const pusher = new Pusher('bc54e1da8192db0508d6', {
             cluster: 'us2',
             forceTLS: true
         });
 
-        // We use universally allowed, open web embed streams for our test
-        const videoAssets = {
-    'space': 'https://storage.googleapis.com/invenio-studio-loops/Logos/Themes/physical_science/astronomy/deep_space/Beautiful%20Nebula.mov',
-    'subcellular': 'https://storage.googleapis.com/invenio-studio-loops/Logos/Themes/life_science/cells/generic_cells/GenericCell2.mov',
-            'earth':'https://storage.googleapis.com/invenio-studio-loops/Logos/Themes/earth_science/earth/Earth%20Rotating%20On%20Axis.mov',
-            'environmental-science':'https://storage.googleapis.com/invenio-studio-loops/Logos/Themes/earth_science/environmental_science/Beach%20Cleanup.mov',
-             'meterology':'https://storage.googleapis.com/invenio-studio-loops/Logos/Themes/earth_science/meterology/Blue%20Sky%20and%20Clouds.mov'
-            
-};
-
         const channel = pusher.subscribe('studio-channel');
 
+        // 2. Listen for the distribution matrix
         channel.bind('change-scene', function(data) {
-            const incomingTheme = data.scene;
-            statusText.innerText = "Loading Stream: " + incomingTheme;
-            
-            if (videoAssets[incomingTheme]) {
-                frameElement.src = videoAssets[incomingTheme];
-                frameElement.style.display = 'block';
-            } else {
-                statusText.innerText = "Unknown theme: " + incomingTheme;
+            // Check if the incoming payload has a specific video assigned to this iPad's ID
+            if (data.assignments && data.assignments[myID]) {
+                const targetVideoUrl = data.assignments[myID];
+                
+                statusText.innerText = "Loading assigned asset...";
+                videoElement.src = targetVideoUrl;
+                videoElement.style.display = 'block';
+                
+                videoElement.play().catch(e => {
+                    statusText.innerText = "Playback stalled. Tap screen to unlock.";
+                });
             }
+        });
+
+        // Fallback touch listener for strict iOS hardware locks
+        document.body.addEventListener('click', () => {
+            videoElement.play().catch(() => {});
         });
     </script>
 </body>
