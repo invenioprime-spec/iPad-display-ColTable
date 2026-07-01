@@ -1,60 +1,50 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>iPad Studio Display</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Studio Link</title>
     <script src="https://js.pusher.com/8.0.1/pusher.min.js"></script>
     <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background-color: #000000;
-        }
-        video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover; /* Forces video to fill iPad screen without black bars */
-            display: none;     /* Hidden until a video loads */
-        }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #333333; display: flex; align-items: center; justify-content: center; color: white; font-family: sans-serif; }
+        video { width: 100%; height: 100%; object-fit: cover; display: none; position: absolute; top:0; left:0; z-index: 10; }
     </style>
 </head>
 <body>
 
+    <div id="status-text">Connecting...</div>
     <video id="studio-video" autoplay loop muted playsinline></video>
 
     <script>
-        // 1. Connect to your Pusher App using your actual credentials
-        const pusher = new Pusher('bc54e1da8192db0508d6', {
-            cluster: 'us2'
-        });
-
-        // 2. Subscribe to your video production channel
-        const channel = pusher.subscribe('studio-channel');
+        const statusText = document.getElementById('status-text');
         const videoElement = document.getElementById('studio-video');
 
-        // 3. Central Media Manifest (Mapping short triggers to your Google Cloud assets)
-        const videoAssets = {
-    'space': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-    'subcellular': 'https://storage.googleapis.com/invenio-studio-loops/Logos/Themes/life_science/cells/neurons/Glowing_Neurons.mov'
-};
+        const pusher = new Pusher('bc54e1da8192db0508d6', {
+            cluster: 'us2',
+            forceTLS: true
+        });
 
-        // 4. Listen for the "change-scene" command
+        pusher.connection.bind('connected', function() {
+            document.body.style.backgroundColor = '#1b4d3e';
+            statusText.innerText = "Connected! Online.";
+        });
+
+        const videoAssets = {
+            'space': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+            'subcellular': 'https://storage.googleapis.com/invenio-studio-loops/Logos/Themes/life_science/cells/neurons/Glowing_Neurons.mov'
+        };
+
+        const channel = pusher.subscribe('studio-channel');
+
         channel.bind('change-scene', function(data) {
-            // We use data.scene to perfectly match your data preference
-            const incomingTheme = data.scene; 
+            const incomingTheme = data.scene;
+            statusText.innerText = "Triggered: " + incomingTheme;
             
             if (videoAssets[incomingTheme]) {
-                // Swap the video source to your Google Cloud Storage link
                 videoElement.src = videoAssets[incomingTheme];
                 videoElement.style.display = 'block';
-                
-                // Programmatically trigger playback
-                videoElement.play().catch(error => {
-                    console.log("iOS Autoplay Intercepted: ", error);
+                videoElement.play().catch(e => {
+                    statusText.innerText = "Tap screen to allow play!";
                 });
             }
         });
