@@ -6,66 +6,45 @@
     <title>Studio Link</title>
     <script src="https://js.pusher.com/8.0.1/pusher.min.js"></script>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #333333; display: flex; align-items: center; justify-content: center; color: white; font-family: sans-serif; flex-direction: column; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #111; display: flex; align-items: center; justify-content: center; color: white; font-family: sans-serif; }
         video { width: 100%; height: 100%; object-fit: cover; display: none; position: absolute; top:0; left:0; z-index: 10; }
-        #unlock-btn { padding: 20px 40px; font-size: 1.8rem; font-weight: bold; background-color: #1b4d3e; color: white; border: none; border-radius: 12px; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.5); z-index: 20; display: block; }
-        #status-text { font-size: 1.5rem; margin-top: 20px; text-align: center; z-index: 5; }
+        #status-text { font-size: 1.5rem; text-align: center; z-index: 5; color: #00ffcc; }
     </style>
 </head>
 <body>
 
-    <button id="unlock-btn" onclick="activatePlayer()">Tap to Activate iPad Display</button>
-    <div id="status-text">Awaiting Activation...</div>
-    
+    <div id="status-text">System Live. Listening for commands...</div>
     <video id="studio-video" autoplay loop muted playsinline></video>
 
     <script>
         const statusText = document.getElementById('status-text');
         const videoElement = document.getElementById('studio-video');
-        const unlockBtn = document.getElementById('unlock-btn');
-
-        // Prime the engine: Force a silent background playback on user click
-        function activatePlayer() {
-            videoElement.play().then(() => {
-                videoElement.pause(); // Successfully primed the hardware!
-                unlockBtn.style.display = 'none'; // Hide button
-                document.body.style.backgroundColor = '#1b4d3e';
-                statusText.innerText = "Connected & Primed! Waiting for signal...";
-            }).catch(e => {
-                statusText.innerText = "Activation failed, try tapping again.";
-            });
-        }
 
         const pusher = new Pusher('bc54e1da8192db0508d6', {
             cluster: 'us2',
             forceTLS: true
         });
 
-        pusher.connection.bind('connected', function() {
-            if(unlockBtn.style.display !== 'none') {
-                statusText.innerText = "Connected to Pusher. Tap the big button above!";
-            }
-        });
-
         const videoAssets = {
-            'space': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-            'subcellular': 'https://storage.googleapis.com/invenio-studio-loops/Logos/Themes/life_science/cells/neurons/Glowing_Neurons.mov'
+            // A lightweight web-optimized stream that requires ZERO user clicks
+            'space': 'https://vjs.zencdn.net/v/oceans.mp4',
+            'subcellular': 'https://vjs.zencdn.net/v/oceans.mp4'
         };
 
         const channel = pusher.subscribe('studio-channel');
 
         channel.bind('change-scene', function(data) {
             const incomingTheme = data.scene;
-            statusText.innerText = "Triggered: " + incomingTheme;
             
             if (videoAssets[incomingTheme]) {
+                statusText.innerText = "Loading Video: " + incomingTheme;
                 videoElement.src = videoAssets[incomingTheme];
                 videoElement.style.display = 'block';
                 
-                // This will now bypass the lock because the browser was already primed
-                videoElement.play().catch(e => {
-                    statusText.innerText = "Error forcing playback: " + e.message;
-                });
+                // Force playback without catching errors to let the native browser handle it
+                videoElement.play();
+            } else {
+                statusText.innerText = "Unknown theme received: " + incomingTheme;
             }
         });
     </script>
